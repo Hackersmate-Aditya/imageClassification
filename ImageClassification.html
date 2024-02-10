@@ -1,0 +1,156 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Interactive Image Classification Interface with Progressive Feedback</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 0;
+            padding: 0;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            height: 100vh;
+            background-color: #fff9ed;
+        }
+        .container {
+            text-align: center;
+            margin-bottom: 20px;
+        }
+        #webcam-container {
+            margin-bottom: 20px;
+        }
+        button {
+            padding: 10px 20px;
+            font-size: 16px;
+            border: none;
+            border-radius: 5px;
+            background-color: #007bff;
+            color: white;
+            cursor: pointer;
+        }
+        button:hover {
+            background-color: #0056b3;
+        }
+        .label {
+            margin-bottom: 5px;
+        }
+        .progress-container {
+            margin-bottom: 10px;
+        }
+        .progress-bar {
+            width: 100px; 
+            height: 20px; 
+            background-color: #ddd;
+            margin-bottom: 5px; 
+            position: relative;
+        }
+        .progress-bar-fill {
+            height: 100%;
+            position: absolute;
+            top: 0;
+            left: 0;
+            transition: width 0.3s ease;
+        }
+        .progress-label {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            color: white;
+        }
+        .progress-bar-blue {
+            background-color: #f21616;
+        }
+
+        .progress-bar-green {
+            background-color: #28a745;
+        }
+
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Interactive Image Classification Interface</h1>
+        <button type="button" onclick="init()">Start</button>
+    </div>
+    <div id="webcam-container" class="container"></div>
+    <div id="label-container" class="container"></div>
+
+    <script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs@latest/dist/tf.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@teachablemachine/image@latest/dist/teachablemachine-image.min.js"></script>
+
+    <script type="text/javascript">
+        const URL = "https://teachablemachine.withgoogle.com/models/Hhs_pEZN4/";
+        let model, webcam, labelContainer, maxPredictions;
+
+        async function init() {
+            const modelURL = URL + "model.json";
+            const metadataURL = URL + "metadata.json";
+
+            model = await tmImage.load(modelURL, metadataURL);
+            maxPredictions = model.getTotalClasses();
+
+            const flip = true;
+            webcam = new tmImage.Webcam(400, 400, flip);
+            await webcam.setup(); 
+            await webcam.play();
+            window.requestAnimationFrame(loop);
+
+            document.getElementById("webcam-container").appendChild(webcam.canvas);
+            labelContainer = document.getElementById("label-container");
+            for (let i = 0; i < maxPredictions; i++) {
+                labelContainer.appendChild(document.createElement("div"));
+            }
+        }
+
+        async function loop() {
+            webcam.update(); 
+            await predict();
+            window.requestAnimationFrame(loop);
+        }
+       
+        async function predict() {
+            const prediction = await model.predict(webcam.canvas);
+            for (let i = 0; i < maxPredictions; i++) {
+                const progressBar = document.createElement('div');
+                progressBar.classList.add('progress-bar');
+
+                const progressBarFill = document.createElement('div');
+                progressBarFill.classList.add('progress-bar-fill');                            
+                
+                progressBarFill.style.width = `${prediction[i].probability * 100}%`;
+
+                if (i % 2 === 0) {
+                    progressBarFill.classList.add('progress-bar-blue');
+                } else {
+                    progressBarFill.classList.add('progress-bar-green');
+                }
+
+                progressBar.appendChild(progressBarFill);
+
+                const label = document.createElement('div');
+                label.classList.add('progress-label');
+                label.textContent = `${(prediction[i].probability * 100).toFixed(2)}%`;                
+
+                progressBar.appendChild(label);
+
+                const statusLabel = document.createElement('div');
+                statusLabel.textContent = prediction[i].className + ": ";
+
+                const container = document.createElement('div');
+                container.appendChild(statusLabel);
+                container.appendChild(progressBar);
+
+                labelContainer.childNodes[i].innerHTML = '';
+                labelContainer.childNodes[i].appendChild(container);                      
+            }
+        }
+    </script>
+</body>
+</html>
+
+
